@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ARGO × jev — 무엇이 바뀌었나</title>
+<style>
+  :root {
+    --bg: #f3f4ec;
+    --panel: #ffffff;
+    --ink: #172a20;
+    --muted: #6a766c;
+    --line: #d7dbcd;
+    --argo: #8a8f82;
+    --argo-bg: #eceee6;
+    --jev: #2a743f;
+    --jev-bg: #e7f2e2;
+    --warn: #b3452f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14170f;
+      --panel: #1c2117;
+      --ink: #eef1e8;
+      --muted: #9aa48f;
+      --line: #33392a;
+      --argo: #7d8474;
+      --argo-bg: #23281c;
+      --jev: #6fce8a;
+      --jev-bg: #1c2c1f;
+      --warn: #e58a72;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14170f;
+    --panel: #1c2117;
+    --ink: #eef1e8;
+    --muted: #9aa48f;
+    --line: #33392a;
+    --argo: #7d8474;
+    --argo-bg: #23281c;
+    --jev: #6fce8a;
+    --jev-bg: #1c2c1f;
+    --warn: #e58a72;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.6 -apple-system, "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+  }
+  main { max-width: 1040px; margin: 0 auto; padding: 28px 16px 60px; }
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  h2 { font-size: 17px; margin: 0 0 4px; }
+  .lede { color: var(--muted); margin: 0 0 28px; font-size: 14px; }
+  .answer {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px 20px; margin-bottom: 34px;
+  }
+  .answer p { margin: 8px 0; }
+  .answer b { color: var(--jev); }
+  figure { margin: 0 0 40px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 18px 16px 14px; }
+  figcaption { color: var(--muted); font-size: 13px; margin-top: 10px; }
+  svg { max-width: 100%; height: auto; display: block; color: var(--ink); }
+  .tag { font: 600 11px/1 -apple-system, sans-serif; }
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--muted);
+    margin-top: 10px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  footer { color: var(--muted); font-size: 12px; margin-top: 20px; }
+  footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>ARGO × jev — desktopweb 실행기 치환</h1>
+  <p class="lede">VIA 파이프라인 안에서 정확히 무엇이 그대로이고, 무엇이 jev로 바뀌었는지.</p>
+
+  <section class="answer">
+    <p><b>맞습니다 — ARGO를 고친 게 아니라, ARGO의 <code>desktopweb</code> lane 하나를 jev로 우회시킨 겁니다.</b></p>
+    <p>음성/텍스트 입력, Context Engine, Evaluator(요청을 어느 lane으로 보낼지 결정하는 LLM), Router, capability card 8개 — 이 전부가 그대로입니다. Evaluator는 지금까지와 똑같이 "이건 desktopweb lane 일이다"라고 판단합니다.</p>
+    <p>다른 점은 <b>그 판단 이후, 실제로 브라우저를 조작하는 실행기</b>뿐입니다. 원래는 ARGO 자체의 tinicore ReAct 루프(스텝마다 LLM이 DSL을 새로 생성)가 맡았는데, 이번 벤치에서는 그 자리에 jev(TypeSafe가 요소 표에서 선택)를 대신 꽂았습니다. 실패하면 원래 ARGO 실행기로 되돌아가는 fallback도 설계에 포함되어 있습니다(아직 실제 argo-pc에는 미구현, 벤치 전용).</p>
+  </section>
+
+  <figure>
+    <h2>1. 시스템 아키텍처 — 어디가 바뀌었나</h2>
+    <svg viewBox="0 0 900 900" role="img"
+      aria-label="VIA 파이프라인: 음성/텍스트 입력부터 Evaluator, Router, capability card 8개까지는 변경 없음. desktopweb lane의 실행기만 ARGO 자체 루프에서 jev로 치환되었고, 실패 시 ARGO로 되돌아가는 폴백 경로가 있음.">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+        </marker>
+        <marker id="arrowJev" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--jev)" />
+        </marker>
+      </defs>
+
+      <!-- 0. input -->
+      <rect x="330" y="10" width="240" height="46" rx="8" fill="none" stroke="currentColor" opacity="0.6"/>
+      <text x="450" y="38" text-anchor="middle" font-size="13">🎤 사용자 발화 / 텍스트</text>
+
+      <line x1="450" y1="56" x2="450" y2="84" stroke="currentColor" marker-end="url(#arrow)" opacity="0.6"/>
+      <text x="466" y="74" font-size="11" fill="currentColor" opacity="0.7">hint</text>
+
+      <!-- 1 voice edge -->
+      <rect x="300" y="86" width="300" height="46" rx="8" fill="none" stroke="currentColor" opacity="0.6"/>
+      <text x="450" y="114" text-anchor="middle" font-size="13">① Voice / Text Edge</text>
+
+      <line x1="450" y1="132" x2="450" y2="160" stroke="currentColor" marker-end="url(#arrow)" opacity="0.6"/>
+
+      <!-- 2 context engine -->
+      <rect x="260" y="162" width="380" height="46" rx="8" fill="none" stroke="currentColor" opacity="0.6"/>
+      <text x="450" y="190" text-anchor="middle" font-size="13">② Context Engine (Ledger · Referent Tracker)</text>
+
+      <line x1="450" y1="208" x2="450" y2="236" stroke="currentColor" marker-end="url(#arrow)" opacity="0.6"/>
+      <text x="472" y="226" font-size="11" opacity="0.7">ContextPack</text>
+
+      <!-- 3 evaluator -->
+      <rect x="260" y="238" width="380" height="52" rx="8" fill="none" stroke="currentColor" stroke-width="1.4"/>
+      <text x="450" y="262" text-anchor="middle" font-size="13">③ Evaluator — LLM 1회, lane 분류</text>
+      <text x="450" y="280" text-anchor="middle" font-size="11" opacity="0.65">변경 없음</text>
+
+      <line x1="450" y1="290" x2="450" y2="318" stroke="currentColor" marker-end="url(#arrow)" opacity="0.6"/>
+      <text x="474" y="308" font-size="11" opacity="0.7">IntentSet{agent, goal}</text>
+
+      <!-- 4 router -->
+      <rect x="260" y="320" width="380" height="52" rx="8" fill="none" stroke="currentColor" stroke-width="1.4"/>
+      <text x="450" y="344" text-anchor="middle" font-size="13">④ Router + capability card 8개</text>
+      <text x="450" y="362" text-anchor="middle" font-size="11" opacity="0.65">변경 없음</text>
+
+      <line x1="450" y1="372" x2="450" y2="398" stroke="currentColor" marker-end="url(#arrow)" opacity="0.6"/>
+
+      <!-- 5 lane chips -->
+      <g font-size="11">
+        <!-- 7 dim chips -->
+        <g opacity="0.55">
+          <rect x="30"  y="400" width="88" height="32" rx="6" fill="none" stroke="currentColor"/>
+          <text x="74" y="420" text-anchor="middle">answer</text>
+          <rect x="128" y="400" width="88" height="32" rx="6" fill="none" stroke="currentColor"/>
+          <text x="172" y="420" text-anchor="middle">files</text>
+          <rect x="226" y="400" width="88" height="32" rx="6" fill="none" stroke="currentColor"/>
+          <text x="270" y="420" text-anchor="middle">windows</text>
+          <rect x="324" y="400" width="88" height="32" rx="6" fill="none" stroke="currentColor"/>
+          <text x="368" y="420" text-anchor="middle">desktop</text>
+          <rect x="490" y="400" width="88" height="32" rx="6" fill="none" stroke="currentColor"/>
+          <text x="534" y="420" text-anchor="middle">tools</text>
+          <rect x="588" y="400" width="88" height="32" rx="6" fill="none" stroke="currentColor"/>
+          <text x="632" y="420" text-anchor="middle">cancel</text>
+          <rect x="686" y="400" width="88" height="32" rx="6" fill="none" stroke="currentColor"/>
+          <text x="730" y="420" text-anchor="middle">correction</text>
+        </g>
+        <!-- desktopweb highlighted -->
+        <rect x="422" y="398" width="88" height="36" rx="6" fill="var(--jev-bg)" stroke="var(--jev)" stroke-width="1.6"/>
+        <text x="466" y="420" text-anchor="middle" font-weight="700" fill="var(--jev)">desktopweb</text>
+      </g>
+
+      <line x1="466" y1="434" x2="466" y2="462" stroke="var(--jev)" stroke-width="1.6" marker-end="url(#arrowJev)"/>
+      <text x="480" y="452" font-size="11" fill="var(--jev)">이 lane만</text>
+
+      <!-- swap box -->
+      <rect x="60" y="464" width="780" height="330" rx="14" fill="none" stroke="var(--jev)" stroke-width="1.6" stroke-dasharray="6 5"/>
+      <text x="450" y="492" text-anchor="middle" font-size="13" font-weight="700" fill="var(--jev)">desktopweb 실행기 — 치환 지점</text>
+
+      <!-- ARGO box -->
+      <rect x="90" y="512" width="330" height="250" rx="10" fill="var(--argo-bg)" stroke="var(--argo)"/>
+      <text x="255" y="538" text-anchor="middle" font-size="13" font-weight="700">ARGO tinicore ReAct 루프</text>
+      <text x="255" y="556" text-anchor="middle" font-size="11" fill="var(--muted)">(기존, 지금도 존재)</text>
+      <text x="120" y="584" font-size="12">· 스텝마다 LLM이 DSL 직접 <tspan font-weight="700">생성</tspan></text>
+      <text x="120" y="608" font-size="12">· 관측 13~25개 LLM 턴</text>
+      <text x="120" y="632" font-size="12">· 완료 검증용 LLM 턴 별도</text>
+      <text x="120" y="656" font-size="12">· 화면 확대(zoom)·재시도로</text>
+      <text x="132" y="676" font-size="12">  시행착오 반복</text>
+      <text x="255" y="716" text-anchor="middle" font-size="13" font-weight="700">실측 중앙값 69.6s</text>
+      <text x="255" y="736" text-anchor="middle" font-size="11" fill="var(--muted)">[39.4–107.1s], 3/3 성공</text>
+
+      <!-- jev box -->
+      <rect x="480" y="512" width="330" height="250" rx="10" fill="var(--jev-bg)" stroke="var(--jev)" stroke-width="1.6"/>
+      <text x="645" y="538" text-anchor="middle" font-size="13" font-weight="700" fill="var(--jev)">jev TypeSafe 선택 루프</text>
+      <text x="645" y="556" text-anchor="middle" font-size="11" fill="var(--jev)">(대체됨, 이번 벤치의 기본값)</text>
+      <text x="510" y="584" font-size="12" fill="var(--ink)">· 요소 표에서 operation·target <tspan font-weight="700">선택</tspan></text>
+      <text x="510" y="608" font-size="12" fill="var(--ink)">· 한 결정 = TypeSafe 요청 1회</text>
+      <text x="510" y="632" font-size="12" fill="var(--ink)">· TYPE_TEXT일 때만 소형 LLM 호출</text>
+      <text x="510" y="656" font-size="12" fill="var(--ink)">· 완료 검증 LLM 턴 없음</text>
+      <text x="645" y="716" text-anchor="middle" font-size="13" font-weight="700" fill="var(--jev)">실측 중앙값 11.0s</text>
+      <text x="645" y="736" text-anchor="middle" font-size="11" fill="var(--muted)">[10.3–11.6s], 3/3 성공</text>
+
+      <!-- fallback arrow -->
+      <text x="450" y="588" text-anchor="middle" font-size="10" fill="var(--warn)">실패 시 폴백</text>
+      <text x="450" y="600" text-anchor="middle" font-size="9" fill="var(--warn)" opacity="0.85">(설계, 미구현)</text>
+      <path d="M480,614 C452,614 448,614 420,614" fill="none" stroke="var(--warn)" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#arrow)"/>
+
+      <line x1="450" y1="796" x2="450" y2="824" stroke="currentColor" marker-end="url(#arrow)" opacity="0.6"/>
+
+      <!-- output -->
+      <rect x="270" y="826" width="360" height="46" rx="8" fill="none" stroke="currentColor" opacity="0.6"/>
+      <text x="450" y="854" text-anchor="middle" font-size="13">VoiceEngine.inject(Result) → 사용자</text>
+    </svg>
+    <div class="legend">
+      <span><i class="swatch" style="background:var(--argo-bg);border:1px solid var(--argo)"></i>ARGO 자체 실행기</span>
+      <span><i class="swatch" style="background:var(--jev-bg);border:1px solid var(--jev)"></i>jev로 치환된 부분</span>
+      <span><i class="swatch" style="background:none;border:1px dashed var(--warn)"></i>미구현 경로</span>
+    </div>
+    <figcaption>Evaluator·Router·capability card는 그대로 두고, desktopweb lane의 <em>실행기</em>만 ARGO 자체 루프에서 jev로 바꿔 끼운 구조. 나머지 7개 lane(answer/files/windows/desktop/tools/cancel/correction)은 이번 벤치에서 아예 건드리지 않았다(stub).</figcaption>
+  </figure>
+
+  <figure>
+    <h2>2. 한 턴의 흐름 — 같은 시작점, 갈라지는 실행 시간</h2>
+    <svg viewBox="0 0 1000 430" role="img"
+      aria-label="같은 발화와 같은 Evaluator 판단까지는 동일하게 진행되다가, desktopweb 실행기 선택 지점에서 갈라진다. ARGO 경로는 13~25개의 LLM 턴을 거쳐 실측 중앙값 69.6초에 끝나고, jev 경로는 TypeSafe 선택 2회만으로 실측 중앙값 11.0초에 끝나 그 지점에서 멈춘다.">
+      <defs>
+        <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+        </marker>
+      </defs>
+
+      <!-- shared prefix -->
+      <rect x="10" y="150" width="120" height="40" rx="7" fill="none" stroke="currentColor" opacity="0.6"/>
+      <text x="70" y="174" text-anchor="middle" font-size="11">발화</text>
+      <line x1="130" y1="170" x2="168" y2="170" stroke="currentColor" marker-end="url(#arrow2)" opacity="0.6"/>
+
+      <rect x="170" y="150" width="150" height="40" rx="7" fill="none" stroke="currentColor" opacity="0.6"/>
+      <text x="245" y="168" text-anchor="middle" font-size="11">Evaluator</text>
+      <text x="245" y="182" text-anchor="middle" font-size="9.5" opacity="0.65">~0.9s, LLM 1회</text>
+      <line x1="320" y1="170" x2="358" y2="170" stroke="currentColor" marker-end="url(#arrow2)" opacity="0.6"/>
+
+      <rect x="360" y="150" width="180" height="40" rx="7" fill="var(--jev-bg)" stroke="var(--jev)" stroke-width="1.4"/>
+      <text x="450" y="174" text-anchor="middle" font-size="11" font-weight="700" fill="var(--jev)">desktopweb 실행기 선택</text>
+
+      <!-- split lines -->
+      <path d="M540,160 C600,160 600,85 660,85" fill="none" stroke="currentColor" opacity="0.55"/>
+      <path d="M540,180 C600,180 600,330 660,330" fill="none" stroke="var(--jev)" stroke-width="1.4"/>
+
+      <!-- ARGO lane -->
+      <text x="660" y="70" font-size="11" font-weight="700">ARGO 경로</text>
+      <line x1="660" y1="85" x2="886" y2="85" stroke="currentColor" stroke-width="6" opacity="0.35"/>
+      <g opacity="0.85">
+        <line x1="672" y1="78" x2="672" y2="92" stroke="currentColor"/>
+        <line x1="702" y1="78" x2="702" y2="92" stroke="currentColor"/>
+        <line x1="732" y1="78" x2="732" y2="92" stroke="currentColor"/>
+        <line x1="762" y1="78" x2="762" y2="92" stroke="currentColor"/>
+        <line x1="792" y1="78" x2="792" y2="92" stroke="currentColor"/>
+        <line x1="822" y1="78" x2="822" y2="92" stroke="currentColor"/>
+        <line x1="852" y1="78" x2="852" y2="92" stroke="currentColor"/>
+      </g>
+      <text x="774" y="60" text-anchor="middle" font-size="10">DSL 생성 LLM 턴 × 13~25 (+완료검증 턴)</text>
+      <circle cx="886" cy="85" r="5" fill="currentColor"/>
+      <text x="886" y="112" text-anchor="middle" font-size="11" font-weight="700">완료 · 69.6s</text>
+      <text x="886" y="126" text-anchor="middle" font-size="9.5" opacity="0.65">[39.4–107.1s]</text>
+
+      <!-- jev lane -->
+      <text x="706" y="301" text-anchor="middle" font-size="10" fill="var(--jev)">TypeSafe 선택 × 2</text>
+      <text x="660" y="317" font-size="11" font-weight="700" fill="var(--jev)">jev 경로</text>
+      <circle cx="672" cy="330" r="5" fill="var(--jev)"/>
+      <line x1="672" y1="330" x2="740" y2="330" stroke="var(--jev)" stroke-width="2"/>
+      <circle cx="740" cy="330" r="5" fill="var(--jev)"/>
+      <text x="706" y="350" text-anchor="middle" font-size="9.5" fill="var(--jev)">TYPE_TEXT → CLICK</text>
+      <text x="740" y="368" text-anchor="middle" font-size="11" font-weight="700" fill="var(--jev)">완료 · 11.0s</text>
+      <text x="740" y="382" text-anchor="middle" font-size="9.5" fill="var(--muted)">[10.3–11.6s]</text>
+      <line x1="740" y1="330" x2="886" y2="330" stroke="var(--jev)" stroke-width="1.2" stroke-dasharray="2 5" opacity="0.6"/>
+      <text x="813" y="317" text-anchor="middle" font-size="9.5" fill="var(--muted)">대기 (타이머 멈춤, 결과 유지)</text>
+
+      <!-- time axis -->
+      <line x1="660" y1="400" x2="900" y2="400" stroke="currentColor" opacity="0.4"/>
+      <text x="660" y="415" font-size="9.5" opacity="0.6" text-anchor="middle">0s</text>
+      <text x="716" y="415" font-size="9.5" opacity="0.6" text-anchor="middle">10s</text>
+      <text x="886" y="415" font-size="9.5" opacity="0.6" text-anchor="middle">70s</text>
+    </svg>
+    <figcaption>Evaluator까지는 완전히 같은 경로. 갈라지는 지점(치환 지점, 강조색)부터 ARGO는 LLM 턴을 십수 차례 반복하고, jev는 TypeSafe 선택 2회로 같은 목표에 도달해 먼저 멈춘다 — 실제 2026-09-27 측정값, 각 3회 실행.</figcaption>
+  </figure>
+
+  <footer>
+    출처: <code>docs/via-argo-bench-design.md</code>, <code>docs/via-vs-argo.md</code>, ARGO PR
+    <a href="https://github.ecodesamsung.com/AGENTIC/ARGO/pull/3446">#3446</a> (<code>docs/plans/FASTWEB_JEV_FUSION.md</code>).
+    측정: macOS, 같은 Chrome 프로필, 같은 LLM(deepseek-chat), A/B 교대 3회씩.
+  </footer>
+</main>
+</body>
+</html>
