@@ -318,3 +318,13 @@ def test_navigation_during_prediction_reobserves_without_action(runner):
     assert runner.state["status"] == "ready"
     assert runner.state["decision"] is None
     runner.state["browser"].act.assert_not_called()
+
+
+def test_custom_start_url_accepts_only_web_pages():
+    from jev_ultrafast.demo import start_url
+
+    assert start_url(" en.wikipedia.org ") == "https://en.wikipedia.org"
+    assert start_url("http://127.0.0.1:3000/x") == "http://127.0.0.1:3000/x"
+    for value in ("", "javascript:alert(1)", "file:///etc/passwd", "chrome://settings", "https://", "about:blank"):
+        with pytest.raises(ValueError, match="http"):
+            start_url(value)
