@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VIA × jev — VOICE_INTERACTION_API_FLOW.html에서 무엇이 바뀌었나</title>
+<title>VIA × jev — argo-pc 배포 기준으로 다시 그림</title>
 <style>
   /* Same tokens as VOICE_INTERACTION_API_FLOW.html, so this reads as a
      companion page, not a different artifact. */
@@ -30,15 +30,17 @@
   .wrap { max-width: 1040px; margin: 0 auto; padding: 28px 20px 70px; }
   h1 { font-size: 24px; margin: 0 0 6px; letter-spacing: -.02em; }
   h1 .via { color: var(--accent); }
-  .sub { color: var(--muted); margin: 0 0 24px; max-width: 760px; }
-  .answer {
+  .sub { color: var(--muted); margin: 0 0 24px; max-width: 780px; }
+  .answer, .correction {
     background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
-    padding: 16px 20px; margin-bottom: 30px; box-shadow: var(--shadow);
+    padding: 16px 20px; margin-bottom: 22px; box-shadow: var(--shadow);
   }
-  .answer p { margin: 8px 0; }
+  .correction { border-left: 4px solid var(--warn); }
+  .correction h3 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--warn); }
+  .answer p, .correction p { margin: 8px 0; }
   .answer b { color: var(--agent); }
-  .answer code { background: var(--code); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; font-size: 13px; }
-  figure { margin: 0 0 34px; background: var(--panel); border: 1px solid var(--line);
+  .answer code, .correction code { background: var(--code); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; font-size: 13px; }
+  figure { margin: 30px 0 34px; background: var(--panel); border: 1px solid var(--line);
     border-radius: 16px; padding: 18px 16px 16px; box-shadow: var(--shadow); }
   figcaption { color: var(--muted); font-size: 13px; margin-top: 12px; }
   svg { max-width: 100%; height: auto; display: block; }
@@ -46,10 +48,12 @@
   .node rect { fill: var(--panel2); stroke: var(--line); stroke-width: 1.4; rx: 10; }
   .node text { fill: var(--text); font-size: 12.5px; font-weight: 700; }
   .node .role { fill: var(--muted); font-size: 10px; font-weight: 500; }
-  .node.dim { opacity: .38; }
+  .node.dim { opacity: .34; }
   .node.hot rect { stroke-width: 2.2; }
   .node.hot.c-agent rect { stroke: var(--agent); filter: drop-shadow(0 0 7px rgba(63,185,112,.55)); }
+  .node.hot.c-router rect { stroke: var(--router); filter: drop-shadow(0 0 7px rgba(227,179,65,.55)); }
   .edge { stroke: var(--line); stroke-width: 1.6; fill: none; opacity: .55; }
+  .edge.dim { opacity: .3; stroke-dasharray: 3 4; }
   .edgelabel { fill: var(--faint); font-size: 10px; font-weight: 600; }
   .legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); margin-top: 12px; }
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
@@ -61,18 +65,23 @@
 </head>
 <body>
 <div class="wrap">
-  <h1><span class="via">VIA</span> × jev — <code style="font-size:15px">VOICE_INTERACTION_API_FLOW.html</code>에서 무엇이 바뀌었나</h1>
-  <p class="sub">이 페이지가 그리는 ①~⑤ 박스 자체는 하나도 바뀌지 않았다. 바뀐 것은 ⑤의 <b style="color:var(--agent)">ARGO</b> 박스 <em>안</em>, 그 다이어그램이 더 이상 펼치지 않는 한 겹 더 깊은 곳이다.</p>
+  <h1><span class="via">VIA</span> × jev — argo-pc 배포 기준으로 다시 그림</h1>
+  <p class="sub"><code>VOICE_INTERACTION_API_FLOW.html</code>의 ①~④(Voice Edge · Context Engine · Evaluator · Router) 자체가 이미 <b style="color:var(--agent)">argo-pc 프로세스</b>다. "Router → ARGO" 화살표는 다른 배포 시나리오이고, argo-pc 안에서 Router는 곧바로 desktopweb을 포함한 8개 lane으로 나간다.</p>
+
+  <section class="correction">
+    <h3>이전 버전 정정</h3>
+    <p>이전 그림은 "⑤ ARGO 박스 안에 <em>두 번째</em> VIA 인스턴스가 내장되어 있다"고 그렸는데, 이건 잘못 그린 겁니다. via-core는 <b>딱 한 벌</b>만 돌아갑니다. <code>via_ask.rs::build_orchestrator()</code>가 만드는 <b>단 하나의 Router</b>가 바로 8개 lane(<code>desktopweb</code> 포함)을 등록합니다 — 그 사이에 "ARGO"라는 이름의 별도 agent를 한 번 더 거치지 않습니다.</p>
+  </section>
 
   <section class="answer">
-    <p><b>이 다이어그램의 ①Voice Edge · ②Context Engine · ③Evaluator · ④Router, 그리고 ⑤의 claude-code · gemini 박스는 전부 그대로입니다.</b> ⑤의 <code>ARGO · CLI/A2A</code> 박스도 이 그림 기준으로는 그대로입니다 — VIA의 Router는 지금도 "ARGO"라는 이름의 agent 하나에게만 자연어 goal을 던지고, 그 결과만 돌려받습니다(<code>agents receive the NL intent only — never history, never the screen</code>, 이 페이지 하단 문구 그대로).</p>
-    <p>실제 argo-pc 배포에서 ⑤ <b>ARGO 박스는 그 자체로 이 다이어그램과 똑같은 구조의 VIA를 한 벌 더 내장</b>하고 있습니다(같은 <code>via-core</code> 크레이트). argo-pc 안에서 그 내부 Router는 "ARGO"라는 하나의 뭉뚱그려진 이름 대신, <code>desktopweb</code>·<code>files</code>·<code>windows</code> 등 8개의 세부 lane으로 다시 나눠 dispatch합니다. <b>이번에 바뀐 건 이 안쪽, 두 번째 VIA 인스턴스의 <code>desktopweb</code> lane이 호출하는 대상</b>뿐입니다 — 아래 그림 참고.</p>
+    <p><code>VOICE_INTERACTION_API_FLOW.html</code>의 "Router → claude-code / ARGO / gemini" 그림은 <b>여러 기기·여러 에이전트로 위임하는 다른 배포</b>(예: 폰의 VIA가 PC의 ARGO CLI를 A2A로 부르는 경우)를 그린 것입니다. <b>argo-pc 자신을 켰을 때는 이 경로를 타지 않습니다.</b></p>
+    <p>argo-pc 배포에서는 ①Voice Edge부터 ④Router까지가 전부 argo-pc 프로세스 <em>안</em>에서 돌아가고, Router는 "ARGO"라는 이름을 거치지 않고 <b>바로</b> <code>answer</code>·<code>files</code>·<code>windows</code>·<code>desktop</code>·<code>desktopweb</code>·<code>tools</code>·<code>cancel</code>·<code>correction</code> 8개 lane 중 하나로 dispatch합니다. <b>이번에 바뀐 건 이 중 <code>desktopweb</code> lane이 호출하는 대상</b>뿐입니다 — 아래 그림 참고.</p>
   </section>
 
   <figure>
-    <h2>⑤ ARGO 박스를 열어보면</h2>
-    <svg viewBox="0 0 900 520" role="img"
-      aria-label="VOICE_INTERACTION_API_FLOW.html의 Router와 claude-code, ARGO, gemini 세 agent 박스를 그대로 재현. ARGO 박스만 강조되어 있고, 거기서 점선으로 연결된 아래쪽 패널은 ARGO 내부에 내장된 두 번째 VIA 인스턴스를 보여준다. 그 내부 Router가 desktopweb lane을 호출할 때, 이번 벤치에서는 ARGO 자신의 tinicore 루프 대신 jev를 호출하도록 설정되었다.">
+    <h2>argo-pc 배포: Router가 실제로 나가는 곳</h2>
+    <svg viewBox="0 0 900 560" role="img"
+      aria-label="Voice Edge부터 Router까지는 argo-pc 프로세스 자체다. VOICE_INTERACTION_API_FLOW.html이 그리는 Router에서 claude-code, ARGO, gemini로 가는 경로는 여러 기기로 위임하는 다른 배포 시나리오이며 흐리게 표시했다. argo-pc 실제 배포에서 Router는 바로 8개 lane으로 나가고, 그 중 desktopweb lane의 호출 대상만 이번 벤치에서 jev로 바뀌었다.">
       <defs>
         <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
@@ -82,112 +91,98 @@
         </marker>
       </defs>
 
-      <!-- ===== top: reproduced from VOICE_INTERACTION_API_FLOW.html (n-router, n-a1..a3) ===== -->
-      <text x="10" y="24" font-size="11" fill="var(--faint)">VOICE_INTERACTION_API_FLOW.html 그대로 (재현)</text>
+      <text x="10" y="20" font-size="11" fill="var(--faint)">① Voice Edge → ② Context Engine → ③ Evaluator 는 위와 동일, 여기서는 생략</text>
 
+      <g class="node hot c-router">
+        <rect x="370" y="34" width="160" height="66"/>
+        <text x="450" y="62" text-anchor="middle">④ Router</text>
+        <text x="450" y="80" text-anchor="middle" class="role">= argo-pc 프로세스 자신</text>
+      </g>
+
+      <!-- dimmed: other-deployment path (multi-device) -->
+      <path class="edge dim" d="M530,50 C610,44 660,40 700,36" marker-end="url(#arrow)"/>
       <g class="node dim">
-        <rect x="30" y="50" width="140" height="66"/>
-        <text x="100" y="78" text-anchor="middle">④ Router</text>
-        <text x="100" y="96" text-anchor="middle" class="role">Thread Registry</text>
-        <text x="100" y="110" text-anchor="middle" class="role">result queue</text>
+        <rect x="702" y="12" width="150" height="46"/>
+        <text x="777" y="32" text-anchor="middle" style="font-size:11px">claude-code / gemini</text>
+        <text x="777" y="46" text-anchor="middle" class="role">CLI · A2A (다른 기기)</text>
       </g>
-
-      <path class="edge" d="M170,66 C210,60 230,52 262,46" marker-end="url(#arrow)"/>
-      <path class="edge" d="M170,83 C210,83 230,83 262,83" marker-end="url(#arrow)"/>
-      <path class="edge" d="M170,100 C210,106 230,114 262,120" marker-end="url(#arrow)"/>
-
+      <path class="edge dim" d="M530,66 C610,66 660,66 700,66" marker-end="url(#arrow)"/>
       <g class="node dim">
-        <rect x="264" y="20" width="140" height="52"/>
-        <text x="334" y="42" text-anchor="middle" style="font-size:11.5px">claude-code</text>
-        <text x="334" y="58" text-anchor="middle" class="role">CLI · t-cc-1</text>
+        <rect x="702" y="60" width="150" height="40"/>
+        <text x="777" y="84" text-anchor="middle" style="font-size:11px">"ARGO" (다른 기기)</text>
       </g>
+      <text x="700" y="112" text-anchor="end" font-size="10" fill="var(--faint)">여러 기기로 위임할 때만 — argo-pc 자신을</text>
+      <text x="700" y="124" text-anchor="end" font-size="10" fill="var(--faint)">켰을 때는 이 경로를 타지 않는다</text>
 
-      <g class="node hot c-agent">
-        <rect x="264" y="60" width="140" height="66"/>
-        <text x="334" y="88" text-anchor="middle" style="font-size:12.5px">ARGO</text>
-        <text x="334" y="104" text-anchor="middle" class="role">CLI / A2A</text>
-        <text x="334" y="118" text-anchor="middle" class="role" fill="var(--agent)">↓ 자세히 보면 —</text>
-      </g>
+      <!-- solid: real argo-pc path straight down to lanes -->
+      <path d="M450,100 L450,150" fill="none" stroke="var(--agent)" stroke-width="2" marker-end="url(#arrowAgent)"/>
+      <text x="466" y="128" font-size="11" fill="var(--agent)" font-weight="700">argo-pc의 실제 경로</text>
 
-      <g class="node dim">
-        <rect x="264" y="140" width="140" height="52"/>
-        <text x="334" y="162" text-anchor="middle" style="font-size:11.5px">gemini</text>
-        <text x="334" y="178" text-anchor="middle" class="role">CLI / API</text>
-      </g>
-
-      <text x="410" y="35" class="edgelabel" fill="var(--faint)">agent 단위로만 dispatch —</text>
-      <text x="410" y="47" class="edgelabel" fill="var(--faint)">VIA는 ARGO 내부를 모른다</text>
-
-      <!-- zoom connector -->
-      <path d="M334,126 C334,150 334,160 334,178" fill="none" stroke="var(--agent)" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrowAgent)"/>
-
-      <!-- ===== zoom box: ARGO's own embedded VIA instance ===== -->
-      <rect x="30" y="182" width="840" height="322" rx="14" fill="var(--panel2)" stroke="var(--agent)" stroke-width="1.6" stroke-dasharray="7 5"/>
-      <text x="450" y="208" text-anchor="middle" font-size="13" font-weight="700" fill="var(--agent)">ARGO(argo-pc) 안에 내장된 두 번째 VIA 인스턴스</text>
-      <text x="450" y="226" text-anchor="middle" font-size="10.5" fill="var(--faint)">같은 via-core. 위쪽 다이어그램에는 이 안쪽이 그려지지 않는다.</text>
-
-      <!-- mini pipeline -->
-      <g class="node dim"><rect x="60" y="246" width="150" height="40"/><text x="135" y="270" text-anchor="middle" style="font-size:11px">Context Engine</text></g>
-      <path class="edge" d="M210,266 L242,266" marker-end="url(#arrow)"/>
-      <g class="node dim"><rect x="244" y="246" width="150" height="40"/><text x="319" y="270" text-anchor="middle" style="font-size:11px">Evaluator</text></g>
-      <path class="edge" d="M394,266 L426,266" marker-end="url(#arrow)"/>
-      <g class="node dim"><rect x="428" y="246" width="150" height="40"/><text x="503" y="270" text-anchor="middle" style="font-size:11px">Router (내부)</text></g>
-      <text x="60" y="238" font-size="10" fill="var(--faint)">— 전부 변경 없음 —</text>
-
-      <path class="edge" d="M578,266 C610,266 630,266 660,266" marker-end="url(#arrow)"/>
+      <text x="450" y="176" text-anchor="middle" font-size="10" fill="var(--faint)">— 8개 lane, 전부 같은 하나의 Router가 등록 —</text>
 
       <!-- 8 lane chips -->
-      <g font-size="10">
+      <g font-size="10.5">
         <g opacity="0.5" fill="var(--muted)">
-          <rect x="30" y="300" width="76" height="28" rx="6" fill="var(--chipbg)" stroke="var(--line)"/>
-          <text x="68" y="318" text-anchor="middle" fill="var(--muted)">answer</text>
-          <rect x="114" y="300" width="76" height="28" rx="6" fill="var(--chipbg)" stroke="var(--line)"/>
-          <text x="152" y="318" text-anchor="middle" fill="var(--muted)">files</text>
-          <rect x="198" y="300" width="76" height="28" rx="6" fill="var(--chipbg)" stroke="var(--line)"/>
-          <text x="236" y="318" text-anchor="middle" fill="var(--muted)">windows</text>
-          <rect x="282" y="300" width="76" height="28" rx="6" fill="var(--chipbg)" stroke="var(--line)"/>
-          <text x="320" y="318" text-anchor="middle" fill="var(--muted)">desktop</text>
-          <rect x="450" y="300" width="76" height="28" rx="6" fill="var(--chipbg)" stroke="var(--line)"/>
-          <text x="488" y="318" text-anchor="middle" fill="var(--muted)">tools</text>
-          <rect x="534" y="300" width="76" height="28" rx="6" fill="var(--chipbg)" stroke="var(--line)"/>
-          <text x="572" y="318" text-anchor="middle" fill="var(--muted)">cancel</text>
-          <rect x="618" y="300" width="90" height="28" rx="6" fill="var(--chipbg)" stroke="var(--line)"/>
-          <text x="663" y="318" text-anchor="middle" fill="var(--muted)">correction</text>
+          <rect x="30" y="190" width="82" height="30" rx="6" fill="var(--chipbg)" stroke="var(--line)"/>
+          <text x="71" y="209" text-anchor="middle" fill="var(--muted)">answer</text>
+          <rect x="120" y="190" width="82" height="30" rx="6" fill="var(--chipbg)" stroke="var(--line)"/>
+          <text x="161" y="209" text-anchor="middle" fill="var(--muted)">files</text>
+          <rect x="210" y="190" width="82" height="30" rx="6" fill="var(--chipbg)" stroke="var(--line)"/>
+          <text x="251" y="209" text-anchor="middle" fill="var(--muted)">windows</text>
+          <rect x="300" y="190" width="82" height="30" rx="6" fill="var(--chipbg)" stroke="var(--line)"/>
+          <text x="341" y="209" text-anchor="middle" fill="var(--muted)">desktop</text>
+          <rect x="480" y="190" width="82" height="30" rx="6" fill="var(--chipbg)" stroke="var(--line)"/>
+          <text x="521" y="209" text-anchor="middle" fill="var(--muted)">tools</text>
+          <rect x="570" y="190" width="82" height="30" rx="6" fill="var(--chipbg)" stroke="var(--line)"/>
+          <text x="611" y="209" text-anchor="middle" fill="var(--muted)">cancel</text>
+          <rect x="660" y="190" width="96" height="30" rx="6" fill="var(--chipbg)" stroke="var(--line)"/>
+          <text x="708" y="209" text-anchor="middle" fill="var(--muted)">correction</text>
         </g>
-        <rect x="366" y="298" width="76" height="32" rx="6" fill="var(--panel2)" stroke="var(--agent)" stroke-width="1.8" filter="drop-shadow(0 0 6px rgba(63,185,112,.5))"/>
-        <text x="404" y="318" text-anchor="middle" font-weight="700" fill="var(--agent)">desktopweb</text>
+        <rect x="388" y="188" width="86" height="34" rx="6" fill="var(--panel2)" stroke="var(--agent)" stroke-width="1.8" filter="drop-shadow(0 0 6px rgba(63,185,112,.5))"/>
+        <text x="431" y="209" text-anchor="middle" font-weight="700" fill="var(--agent)">desktopweb</text>
       </g>
 
-      <path d="M404,330 L404,354" fill="none" stroke="var(--agent)" stroke-width="1.6" marker-end="url(#arrowAgent)"/>
-      <text x="418" y="346" font-size="10" fill="var(--agent)">이 lane만</text>
+      <path d="M431,222 L431,246" fill="none" stroke="var(--agent)" stroke-width="1.6" marker-end="url(#arrowAgent)"/>
+      <text x="446" y="238" font-size="10" fill="var(--agent)">이 lane만</text>
 
-      <!-- swap detail -->
+      <!-- swap box -->
+      <rect x="30" y="250" width="840" height="270" rx="14" fill="var(--panel2)" stroke="var(--agent)" stroke-width="1.6" stroke-dasharray="7 5"/>
+      <text x="450" y="276" text-anchor="middle" font-size="13" font-weight="700" fill="var(--agent)">desktopweb lane — 이 Router가 호출하는 대상 둘 중 하나</text>
+
       <g>
-        <rect x="60" y="358" width="360" height="128" rx="10" fill="var(--panel)" stroke="var(--line)"/>
-        <text x="240" y="380" text-anchor="middle" font-size="12" font-weight="700">ARGO tinicore ReAct 루프</text>
-        <text x="240" y="396" text-anchor="middle" font-size="10" fill="var(--faint)">(코드 그대로, 수정 없음)</text>
-        <text x="80" y="418" font-size="11" fill="var(--muted)">스텝마다 LLM이 DSL 생성 · 13~25턴</text>
-        <text x="240" y="466" text-anchor="middle" font-size="13" font-weight="700">실측 중앙값 69.6s</text>
+        <rect x="60" y="296" width="360" height="200" rx="10" fill="var(--panel)" stroke="var(--line)"/>
+        <text x="240" y="322" text-anchor="middle" font-size="13" font-weight="700">ARGO tinicore ReAct 루프</text>
+        <text x="240" y="340" text-anchor="middle" font-size="10.5" fill="var(--faint)">(코드 그대로, 수정 없음)</text>
+        <text x="80" y="366" font-size="11.5" fill="var(--muted)">· 스텝마다 LLM이 DSL 직접 생성</text>
+        <text x="80" y="388" font-size="11.5" fill="var(--muted)">· 관측 13~25개 LLM 턴</text>
+        <text x="80" y="410" font-size="11.5" fill="var(--muted)">· 완료 검증용 LLM 턴 별도</text>
+        <text x="240" y="472" text-anchor="middle" font-size="14" font-weight="700">실측 중앙값 69.6s</text>
+        <text x="240" y="490" text-anchor="middle" font-size="10.5" fill="var(--muted)">[39.4–107.1s], 3/3 성공</text>
       </g>
       <g>
-        <rect x="450" y="358" width="360" height="128" rx="10" fill="#12261a" stroke="var(--agent)" stroke-width="1.6"/>
-        <text x="630" y="380" text-anchor="middle" font-size="12" font-weight="700" fill="var(--agent)">jev TypeSafe 선택 루프</text>
-        <text x="630" y="396" text-anchor="middle" font-size="10" fill="var(--agent)">(별도 프로세스, 이번 벤치의 호출 대상)</text>
-        <text x="470" y="418" font-size="11" fill="var(--text)">요소 표에서 operation·target 선택</text>
-        <text x="630" y="466" text-anchor="middle" font-size="13" font-weight="700" fill="var(--agent)">실측 중앙값 11.0s</text>
+        <rect x="450" y="296" width="360" height="200" rx="10" fill="#12261a" stroke="var(--agent)" stroke-width="1.6"/>
+        <text x="630" y="322" text-anchor="middle" font-size="13" font-weight="700" fill="var(--agent)">jev TypeSafe 선택 루프</text>
+        <text x="630" y="340" text-anchor="middle" font-size="10.5" fill="var(--agent)">(별도 프로세스, 이번 벤치의 호출 대상)</text>
+        <text x="470" y="366" font-size="11.5" fill="var(--text)">· 요소 표에서 operation·target 선택</text>
+        <text x="470" y="388" font-size="11.5" fill="var(--text)">· 한 결정 = TypeSafe 요청 1회</text>
+        <text x="470" y="410" font-size="11.5" fill="var(--text)">· TYPE_TEXT일 때만 소형 LLM 호출</text>
+        <text x="630" y="472" text-anchor="middle" font-size="14" font-weight="700" fill="var(--agent)">실측 중앙값 11.0s</text>
+        <text x="630" y="490" text-anchor="middle" font-size="10.5" fill="var(--muted)">[10.3–11.6s], 3/3 성공</text>
       </g>
-      <path d="M450,410 C435,410 435,410 420,410" fill="none" stroke="var(--warn)" stroke-width="1.3" stroke-dasharray="4 4" marker-end="url(#arrow)"/>
-      <text x="435" y="402" text-anchor="middle" font-size="9" fill="var(--warn)">실패 시 폴백</text>
+      <text x="435" y="382" text-anchor="middle" font-size="9.5" fill="var(--warn)">실패 시</text>
+      <text x="435" y="393" text-anchor="middle" font-size="9" fill="var(--warn)" opacity="0.85">폴백(미구현)</text>
+      <path d="M450,406 C435,406 435,406 420,406" fill="none" stroke="var(--warn)" stroke-width="1.3" stroke-dasharray="4 4" marker-end="url(#arrow)"/>
     </svg>
     <div class="legend">
-      <span><i class="swatch" style="background:var(--panel2)"></i>변경 없음 (VIA 공통 + ARGO 코드)</span>
+      <span><i class="swatch" style="background:var(--panel2);border-color:var(--router)"></i>argo-pc의 실제 Router (하나뿐)</span>
+      <span><i class="swatch" style="opacity:.4"></i>다른 배포 시나리오 (해당 없음)</span>
       <span><i class="swatch" style="background:#12261a;border-color:var(--agent)"></i>이번 벤치에서 호출된 대상</span>
     </div>
-    <figcaption>위쪽 절반은 VOICE_INTERACTION_API_FLOW.html의 Router·claude-code·ARGO·gemini 박스를 그대로 재현한 것 — 이 페이지 기준 architecture는 하나도 안 바뀌었다. 바뀐 것은 ARGO 박스를 열었을 때 보이는, argo-pc 자신이 내장한 두 번째 VIA 인스턴스의 <code>desktopweb</code> lane 호출 대상뿐이다.</figcaption>
+    <figcaption>via-core Router는 argo-pc 안에 <b>하나만</b> 있다. VOICE_INTERACTION_API_FLOW.html의 "Router → ARGO" 경로는 여러 기기로 위임하는 별도 시나리오이고 argo-pc 자신을 실행할 때는 타지 않는다. argo-pc의 그 하나뿐인 Router가 바로 8개 lane으로 나가며, 이번에 바뀐 건 그 중 desktopweb lane의 호출 대상뿐이다.</figcaption>
   </figure>
 
   <footer>
-    원본: <code>docs/plans/VOICE_INTERACTION_API_FLOW.html</code>. 관련 PR:
+    원본: <code>docs/plans/VOICE_INTERACTION_API_FLOW.html</code>. 근거: <code>argo-pc/rust-backend/src/via_ask.rs::build_orchestrator()</code>(단일 Router, 8-lane 등록). 관련 PR:
     <a href="https://github.ecodesamsung.com/AGENTIC/ARGO/pull/3446">#3446</a>,
     jev 저장소 companion diagram: <code>docs/argo-jev-architecture.html</code> (ddung2c/jev-ultrafast).
   </footer>
