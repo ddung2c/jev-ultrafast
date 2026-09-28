@@ -338,7 +338,7 @@ def run_one(arm, args, run_dir):
             "llm_model": args.llm_model,
             "llm_endpoint": args.llm_endpoint,
         }
-        (run_dir / "run.json").write_text(json.dumps(record, indent=2, ensure_ascii=False))
+        (run_dir / "run.json").write_text(json.dumps(record, indent=2, ensure_ascii=False), encoding="utf-8")
         return record
     finally:
         chrome.terminate()
@@ -355,7 +355,7 @@ def _default_deepseek_key():
     env_path = ROOT / ".env"
     if not env_path.exists():
         return ""
-    for line in env_path.read_text().splitlines():
+    for line in env_path.read_text(encoding="utf-8").splitlines():
         if line.startswith("TEXT_MODEL_API_KEY="):
             return line.split("=", 1)[1].strip()
     return ""
@@ -410,7 +410,8 @@ def main():
             runs.append(record)
 
     summary = summarize_runs(runs)
-    (out_dir / "summary.json").write_text(json.dumps({"runs": runs, "summary": summary}, indent=2, ensure_ascii=False))
+    summary_json = json.dumps({"runs": runs, "summary": summary}, indent=2, ensure_ascii=False)
+    (out_dir / "summary.json").write_text(summary_json, encoding="utf-8")
     print("=== summary ===")
     print(json.dumps(summary, indent=2, ensure_ascii=False))
     print(f"\nWritten to {out_dir}")

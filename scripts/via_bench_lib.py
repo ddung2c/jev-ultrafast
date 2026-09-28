@@ -54,7 +54,7 @@ def load_events(path):
     if not p.exists():
         return []
     events = []
-    for line in p.read_text().splitlines():
+    for line in p.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if line:
             events.append(json.loads(line))

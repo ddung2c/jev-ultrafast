@@ -63,6 +63,7 @@ on:
 | Google Chrome | — | Default install path is auto-detected; see §4 if yours is elsewhere. |
 | `ffmpeg` | `ffmpeg -version` | Only needed if you render the comparison video (§7). A static Windows build (gyan.dev or similar) on `PATH` is fine. |
 | Visual Studio Build Tools (C++) | — | Needed for some Rust native deps (objectbox, etc.) on MSVC targets. Install the "Desktop development with C++" workload if `cargo build` fails on a linker error. |
+| LLVM/clang | `clang --version` | **Confirmed required** (2026-09-28 Windows run): ARGO's `tinicore` build script runs `bindgen` for objectbox, which needs `libclang.dll`. Without it, `cargo build -p argo-cli --release --features bench-hooks` fails at G2 with `panicked at .../bindgen-.../lib.rs: Unable to find libclang`. Install LLVM (e.g. the official installer from releases.llvm.org, or `winget install LLVM.LLVM`), then set `$env:LIBCLANG_PATH="C:\Program Files\LLVM\bin"` (or wherever `libclang.dll` landed) before building. |
 
 LLM credentials: you need an OpenAI-compatible API key for **both** roles —
 the VIA Evaluator and ARGO's `desktopweb` sub-agent share one set of
@@ -87,12 +88,14 @@ cargo build -p argo-cli --release --features bench-hooks
 
 This builds `target\release\argo.exe` with the bench-only
 `--desktopweb-bench` flag compiled in (feature-gated, off in a normal
-`cargo build -p argo-cli --release`). If this fails on a native-dependency
-linker error (objectbox is the likely culprit — it was the one macOS hit,
-see `artifacts/via_bench/phase0.md` in jev-ultrafast for that writeup),
-capture the full error and report it rather than working around it by
-disabling default features silently — the goal is a build that matches
-argo-pc's own desktopweb code path as closely as possible.
+`cargo build -p argo-cli --release`). If this fails with
+`Unable to find libclang`, you're missing the LLVM/`LIBCLANG_PATH`
+prerequisite from §2 — set it and retry. For any *other* native-dependency
+or linker error (objectbox is the next likely culprit — it was the one
+macOS hit, see `artifacts/via_bench/phase0.md` in jev-ultrafast for that
+writeup), capture the full error and report it rather than working around
+it by disabling default features silently — the goal is a build that
+matches argo-pc's own desktopweb code path as closely as possible.
 
 Then build the independent VIA bench harness:
 
@@ -123,8 +126,24 @@ uv run ruff check .
 
 Expect: all tests pass, ruff reports no errors. If either fails on Windows
 in a way that looks platform-specific (path separators, encoding), that's
-new information worth reporting — the scripts were made cross-platform for
-this runbook, but hadn't been run on real Windows yet as of this writing.
+new information worth reporting.
+
+**Already fixed (2026-09-28), pull latest before reporting an encoding
+failure:** an earlier version of this branch called `Path.read_text()` /
+`Path.write_text()` without `encoding="utf-8"` in several places
+(`jev_ultrafast/browser.py`'s module-level `snapshot.js` load,
+`jev_ultrafast/demo.py`'s static-file serving, and the bench's own
+`via_bench_lib.py`/`bench_via_argo.py`/`render_via_compare.py` JSON
+round-trips, several of which carry the Korean goal text verbatim). On
+Windows, `Path.read_text()`'s default encoding is the process's active code
+page (commonly `cp949` on a Korean-locale machine), not UTF-8, so reading a
+UTF-8 file with non-ASCII bytes raises `UnicodeDecodeError` — this crashed
+at `import jev_ultrafast.browser` time, which made even test *collection*
+fail. All of those call sites now pass `encoding="utf-8"` explicitly. If
+`uv run pytest -q` still fails with a `UnicodeDecodeError`, it's a new call
+site this pass missed — report the exact traceback rather than patching
+around it with a locale change, since the real fix is always "name the
+encoding," not "match the file to the locale."
 
 ## 4. Windows-specific gotchas
 

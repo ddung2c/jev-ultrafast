@@ -146,7 +146,7 @@ def extract_frames(video_path, out_dir, fps=30):
 
 def load_panel(run_dir, crop_scale, window_w=1280, window_h=860, window_x=0, window_y=40):
     run_dir = Path(run_dir)
-    run = json.loads((run_dir / "run.json").read_text())
+    run = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
     events = load_events(run_dir / "events.jsonl")
     st = stages(events)
     frames = extract_frames(run_dir / "screen.mp4", run_dir / "frames")
@@ -247,7 +247,7 @@ def draw_side(canvas, x, panel, t_ms, w, label, total_end_ms):
 
 def render(bench_dir, out_stub, fps=30, crop_scale=2.0):
     bench_dir = Path(bench_dir)
-    summary = json.loads((bench_dir / "summary.json").read_text())["summary"]
+    summary = json.loads((bench_dir / "summary.json").read_text(encoding="utf-8"))["summary"]
     argo_dir = summary["argo"]["representative_run_dir"]
     jev_dir = summary["jev"]["representative_run_dir"]
     if not argo_dir or not jev_dir:
@@ -299,11 +299,11 @@ def render(bench_dir, out_stub, fps=30, crop_scale=2.0):
         check=True,
     )
 
-    all_runs = json.loads((bench_dir / "summary.json").read_text())["runs"]
+    all_runs = json.loads((bench_dir / "summary.json").read_text(encoding="utf-8"))["runs"]
     argo_run = next((r for r in all_runs if r["arm"] == "argo"), None)
     argo_model_label = f"Evaluator+desktopweb: {argo_run['llm_model']}" if argo_run else "(unknown)"
     table = markdown_table(summary, argo_model_label, "deepseek-flash")
-    (ROOT / "docs" / f"{out_stub}.md").write_text(table + "\n")
+    (ROOT / "docs" / f"{out_stub}.md").write_text(table + "\n", encoding="utf-8")
     print(table)
     print(f"\nWritten {out_mp4}, {out_gif}, {out_stub}.md")
 
