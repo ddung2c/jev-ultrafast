@@ -15,6 +15,7 @@ import argparse
 import glob
 import json
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -35,7 +36,30 @@ GOAL = "네이버에서 서울 날씨 검색해줘"
 # fallback probe port (tinicli/src/adapters/desktop_browser_bridge.rs), so
 # ARGO would find this Chrome unprompted even without ARGO_BROWSER_ATTACH.
 CDP_PORT = 9333
-CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+
+
+def default_chrome_path():
+    """Best-effort per-OS default; override with --chrome-bin if this misses
+    (a non-default install dir, a Chrome Beta/Canary channel, etc.)."""
+    system = platform.system()
+    if system == "Darwin":
+        return "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    if system == "Windows":
+        candidates = [
+            os.path.expandvars(r"%ProgramFiles%\Google\Chrome\Application\chrome.exe"),
+            os.path.expandvars(r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"),
+            os.path.expandvars(r"%LocalAppData%\Google\Chrome\Application\chrome.exe"),
+        ]
+        for c in candidates:
+            if Path(c).exists():
+                return c
+        return candidates[0]  # let the caller fail loudly with a clear path if none exist
+    # Linux
+    for name in ("google-chrome", "google-chrome-stable", "chromium-browser", "chromium"):
+        found = shutil.which(name)
+        if found:
+            return found
+    return "google-chrome"
 
 
 def cdp_get(path):
@@ -64,11 +88,11 @@ def cdp_eval(target_id, expression):
     return result.get("result", {}).get("result", {}).get("value")
 
 
-def launch_chrome(profile_dir):
+def launch_chrome(profile_dir, chrome_bin):
     profile_dir.mkdir(parents=True, exist_ok=True)
     proc = subprocess.Popen(
         [
-            CHROME,
+            chrome_bin,
             f"--remote-debugging-port={CDP_PORT}",
             f"--user-data-dir={profile_dir}",
             "--no-first-run",
@@ -103,20 +127,28 @@ def reset_tabs():
 
 
 def start_screen_recording(out_path, screen_index):
+    """`screen_index` is macOS's avfoundation device index (see
+    `ffmpeg -f avfoundation -list_devices true -i ""`); ignored on the other
+    two backends, which capture the whole primary display instead -- there is
+    no equivalent "pick a display" index plumbed through for gdigrab/x11grab
+    yet. If a run's Chrome window isn't on the primary display, move it
+    there first."""
+    system = platform.system()
+    if system == "Darwin":
+        input_args = ["-f", "avfoundation", "-framerate", "30", "-capture_cursor", "1", "-i", f"{screen_index}:none"]
+    elif system == "Windows":
+        # gdigrab has no -capture_cursor; cursor capture is on by default.
+        input_args = ["-f", "gdigrab", "-framerate", "30", "-i", "desktop"]
+    else:
+        display = os.environ.get("DISPLAY", ":0.0")
+        input_args = ["-f", "x11grab", "-framerate", "30", "-i", display]
     return subprocess.Popen(
         [
             "ffmpeg",
             "-y",
             "-loglevel",
             "error",
-            "-f",
-            "avfoundation",
-            "-framerate",
-            "30",
-            "-capture_cursor",
-            "1",
-            "-i",
-            f"{screen_index}:none",
+            *input_args,
             "-c:v",
             "libx264",
             "-preset",
@@ -132,15 +164,36 @@ def start_screen_recording(out_path, screen_index):
 
 
 def objectbox_lib_dir(argo_bin):
-    """macOS-only workaround: the `argo` binary's objectbox rpath does not
-    reach the final bin link (see docs/via-argo-bench-design.md phase0.md
-    G3), so `dyld` cannot find libobjectbox.dylib unless DYLD_LIBRARY_PATH
-    points at it directly. Discovered by glob, not a hardcoded hash, since
-    Cargo's build-script output directory name changes across rebuilds.
+    """Workaround observed on macOS: the `argo` binary's objectbox rpath does
+    not reach the final bin link (see docs/via-argo-bench-design.md
+    phase0.md G3), so `dyld` cannot find libobjectbox.dylib unless
+    DYLD_LIBRARY_PATH points at it directly. Discovered by glob, not a
+    hardcoded hash, since Cargo's build-script output directory name changes
+    across rebuilds.
+
+    Not yet confirmed necessary on Windows/Linux -- Windows in particular
+    usually finds a DLL sitting next to the .exe or anywhere on PATH without
+    this. `objectbox_env_var()` below picks the right variable name; this
+    function only needs to find the directory, if any exists.
     """
     repo_root = Path(argo_bin).resolve().parents[2]  # .../target/release/argo -> repo root
-    matches = glob.glob(str(repo_root / "target" / "release" / "build" / "tinicore-*" / "out" / "objectbox-*" / "lib"))
+    pattern = str(repo_root / "target" / "release" / "build" / "tinicore-*" / "out" / "objectbox-*" / "lib")
+    matches = glob.glob(pattern)
+    if not matches:
+        # Some platforms/versions may not nest a "lib" subdir; fall back to
+        # the objectbox-* dir itself.
+        matches = glob.glob(str(repo_root / "target" / "release" / "build" / "tinicore-*" / "out" / "objectbox-*"))
     return matches[0] if matches else None
+
+
+def objectbox_env_var():
+    """The dynamic-linker search-path variable this OS actually reads."""
+    system = platform.system()
+    if system == "Darwin":
+        return "DYLD_LIBRARY_PATH"
+    if system == "Windows":
+        return "PATH"  # prepend, don't replace -- see call site
+    return "LD_LIBRARY_PATH"
 
 
 def stop_screen_recording(proc):
@@ -206,7 +259,7 @@ class ForegroundWatcher:
 def run_one(arm, args, run_dir):
     run_dir.mkdir(parents=True, exist_ok=False)
     profile_dir = run_dir / "chrome-profile"
-    chrome = launch_chrome(profile_dir)
+    chrome = launch_chrome(profile_dir, args.chrome_bin)
     try:
         reset_tabs()
         time.sleep(1.0)
@@ -229,7 +282,11 @@ def run_one(arm, args, run_dir):
             env["ARGO_BROWSER_NO_AUTOLAUNCH"] = "1"
             lib_dir = objectbox_lib_dir(args.argo_bin)
             if lib_dir:
-                env["DYLD_LIBRARY_PATH"] = lib_dir
+                var = objectbox_env_var()
+                if var == "PATH":
+                    env["PATH"] = lib_dir + os.pathsep + env.get("PATH", "")
+                else:
+                    env[var] = lib_dir
         else:
             env["BU_NAME"] = "viabench"
             env["BU_CDP_WS"] = cdp_get("/json/version")["webSocketDebuggerUrl"]
@@ -308,10 +365,15 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--via-bench-bin", required=True)
     parser.add_argument("--argo-bin", required=True)
-    parser.add_argument("--uv-bin", default=str(Path.home() / "Library/Python/3.12/bin/uv"))
+    parser.add_argument("--uv-bin", default=shutil.which("uv") or "uv")
+    parser.add_argument("--chrome-bin", default=default_chrome_path())
     parser.add_argument("--runs", type=int, default=3, help="measured runs per arm (a warmup run precedes each arm)")
     parser.add_argument("--timeout-s", type=int, default=180)
-    parser.add_argument("--screen-index", default="1", help="avfoundation screen device index (see --list-devices)")
+    parser.add_argument(
+        "--screen-index",
+        default="1",
+        help="avfoundation screen device index on macOS (see --list-devices); ignored on Windows/Linux",
+    )
     parser.add_argument("--out-dir", default=None)
     parser.add_argument(
         "--llm-api-key",

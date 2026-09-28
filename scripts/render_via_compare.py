@@ -11,6 +11,7 @@ Usage:
 
 import argparse
 import json
+import platform
 import subprocess
 import sys
 from pathlib import Path
@@ -21,18 +22,92 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.via_bench_lib import clean_argo_steps, clean_jev_steps, load_events, markdown_table, stages  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
-kr_path = "/System/Library/Fonts/AppleSDGothicNeo.ttc"
-mono_path = "/System/Library/Fonts/Menlo.ttc"
 ink, muted, green, red, gray = "#172a20", "#6a766c", "#2a743f", "#b3452f", "#9aa295"
 highlight_bg, highlight_border = "#eaf3e2", "#8fb37e"
 
 
+def _find_font(candidates):
+    for path, index in candidates:
+        if Path(path).exists():
+            return path, index
+    return None, 0
+
+
+def _kr_font_paths():
+    """(regular_path, bold_path_or_None, ttc_index_for_bold) per platform.
+
+    macOS ships a single AppleSDGothicNeo.ttc with regular at index 0 and
+    bold at index 1. Windows' Malgun Gothic ships as two separate .ttf files
+    instead, so there is no ttc index to select. Linux distros vary; Noto
+    Sans CJK is the common package name."""
+    system = platform.system()
+    if system == "Darwin":
+        return [("/System/Library/Fonts/AppleSDGothicNeo.ttc", 0)], [("/System/Library/Fonts/AppleSDGothicNeo.ttc", 1)]
+    if system == "Windows":
+        import os
+
+        windir = os.environ.get("WINDIR", r"C:\Windows")
+        return (
+            [(rf"{windir}\Fonts\malgun.ttf", 0)],
+            [(rf"{windir}\Fonts\malgunbd.ttf", 0), (rf"{windir}\Fonts\malgun.ttf", 0)],
+        )
+    linux_regular = [
+        ("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", 0),
+        ("/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc", 0),
+        ("/usr/share/fonts/truetype/nanum/NanumGothic.ttf", 0),
+    ]
+    linux_bold = [
+        ("/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc", 0),
+        ("/usr/share/fonts/truetype/noto/NotoSansCJK-Bold.ttc", 0),
+        ("/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf", 0),
+    ]
+    return linux_regular, linux_bold
+
+
+def _mono_font_path():
+    system = platform.system()
+    if system == "Darwin":
+        return "/System/Library/Fonts/Menlo.ttc", 0
+    if system == "Windows":
+        import os
+
+        windir = os.environ.get("WINDIR", r"C:\Windows")
+        return rf"{windir}\Fonts\consola.ttf", 0
+    candidates = (
+        "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
+    )
+    for path in candidates:
+        if Path(path).exists():
+            return path, 0
+    return None, 0
+
+
+_KR_REGULAR_PATH, _ = _find_font(_kr_font_paths()[0])
+_KR_BOLD_PATH, _KR_BOLD_INDEX = _find_font(_kr_font_paths()[1])
+_MONO_PATH, _MONO_INDEX = _mono_font_path()
+if not _KR_REGULAR_PATH:
+    raise SystemExit(
+        "No Korean-capable font found for this platform. Install one (e.g. Malgun "
+        "Gothic on Windows, Noto Sans CJK on Linux) or edit _kr_font_paths() in "
+        "scripts/render_via_compare.py to point at it."
+    )
+if not _MONO_PATH:
+    raise SystemExit(
+        "No monospace font found for this platform. Install one (e.g. Consolas on "
+        "Windows, DejaVu Sans Mono on Linux) or edit _mono_font_path() in "
+        "scripts/render_via_compare.py to point at it."
+    )
+
+
 def kr(n, bold=False):
-    return ImageFont.truetype(kr_path, n, index=1 if bold else 0)
+    if bold and _KR_BOLD_PATH:
+        return ImageFont.truetype(_KR_BOLD_PATH, n, index=_KR_BOLD_INDEX)
+    return ImageFont.truetype(_KR_REGULAR_PATH, n)
 
 
 def mono(n):
-    return ImageFont.truetype(mono_path, n)
+    return ImageFont.truetype(_MONO_PATH, n, index=_MONO_INDEX)
 
 
 def wrap_text(draw, text, font, max_width, max_lines=2):
