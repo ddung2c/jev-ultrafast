@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ARGO × jev — 무엇이 바뀌었나</title>
+<title>ARGO × jev — 실행기 호출 대상</title>
 <style>
   :root {
     --bg: #f3f4ec;
@@ -75,19 +75,19 @@
 </head>
 <body>
 <main>
-  <h1>ARGO × jev — desktopweb 실행기 치환</h1>
-  <p class="lede">VIA 파이프라인 안에서 정확히 무엇이 그대로이고, 무엇이 jev로 바뀌었는지.</p>
+  <h1>ARGO × jev — desktopweb lane, 두 실행기 중 호출</h1>
+  <p class="lede">ARGO 코드는 수정되지 않았다. VIA Router가 desktopweb 작업을 어느 실행기로 보내는지만 다르다.</p>
 
   <section class="answer">
-    <p><b>맞습니다 — ARGO를 고친 게 아니라, ARGO의 <code>desktopweb</code> lane 하나를 jev로 우회시킨 겁니다.</b></p>
+    <p><b>ARGO의 내부 로직은 코드 한 줄도 바뀌지 않았습니다. Router가 desktopweb 작업을 보낼 곳을 하나 더 갖게 됐을 뿐입니다.</b></p>
     <p>음성/텍스트 입력, Context Engine, Evaluator(요청을 어느 lane으로 보낼지 결정하는 LLM), Router, capability card 8개 — 이 전부가 그대로입니다. Evaluator는 지금까지와 똑같이 "이건 desktopweb lane 일이다"라고 판단합니다.</p>
-    <p>다른 점은 <b>그 판단 이후, 실제로 브라우저를 조작하는 실행기</b>뿐입니다. 원래는 ARGO 자체의 tinicore ReAct 루프(스텝마다 LLM이 DSL을 새로 생성)가 맡았는데, 이번 벤치에서는 그 자리에 jev(TypeSafe가 요소 표에서 선택)를 대신 꽂았습니다. 실패하면 원래 ARGO 실행기로 되돌아가는 fallback도 설계에 포함되어 있습니다(아직 실제 argo-pc에는 미구현, 벤치 전용).</p>
+    <p>다른 점은 <b>그 판단 이후, Router가 실제로 어느 실행기를 호출하느냐</b>뿐입니다. ARGO 자체의 tinicore ReAct 루프(스텝마다 LLM이 DSL을 새로 생성)는 <b>지금도 코드가 그대로 있고 수정되지 않았습니다</b> — Router가 그 루프를 호출하지 않고, 완전히 별도 프로세스인 jev(TypeSafe가 요소 표에서 선택)를 대신 호출하도록 이번 벤치에서만 설정한 것입니다. jev가 실패하면 원래 ARGO 실행기를 호출하도록 되돌아가는 fallback도 설계에는 포함되어 있습니다(아직 실제 argo-pc에는 미배선, 벤치 전용).</p>
   </section>
 
   <figure>
-    <h2>1. 시스템 아키텍처 — 어디가 바뀌었나</h2>
+    <h2>1. 시스템 아키텍처 — ARGO는 그대로, Router의 호출 대상만 다르다</h2>
     <svg viewBox="0 0 900 900" role="img"
-      aria-label="VIA 파이프라인: 음성/텍스트 입력부터 Evaluator, Router, capability card 8개까지는 변경 없음. desktopweb lane의 실행기만 ARGO 자체 루프에서 jev로 치환되었고, 실패 시 ARGO로 되돌아가는 폴백 경로가 있음.">
+      aria-label="VIA 파이프라인: 음성/텍스트 입력부터 Evaluator, Router, capability card 8개, 그리고 ARGO의 tinicore ReAct 루프까지 전부 코드 변경 없음. desktopweb lane에서 Router가 호출하는 대상이 ARGO 루프 또는 jev 중 이번 벤치에서는 jev로 설정되었고, 실패 시 ARGO 루프를 호출하는 폴백 경로가 있음.">
       <defs>
         <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
@@ -161,12 +161,12 @@
 
       <!-- swap box -->
       <rect x="60" y="464" width="780" height="330" rx="14" fill="none" stroke="var(--jev)" stroke-width="1.6" stroke-dasharray="6 5"/>
-      <text x="450" y="492" text-anchor="middle" font-size="13" font-weight="700" fill="var(--jev)">desktopweb 실행기 — 치환 지점</text>
+      <text x="450" y="492" text-anchor="middle" font-size="13" font-weight="700" fill="var(--jev)">Router가 호출하는 대상 — 실행기 둘 중 하나</text>
 
       <!-- ARGO box -->
       <rect x="90" y="512" width="330" height="250" rx="10" fill="var(--argo-bg)" stroke="var(--argo)"/>
       <text x="255" y="538" text-anchor="middle" font-size="13" font-weight="700">ARGO tinicore ReAct 루프</text>
-      <text x="255" y="556" text-anchor="middle" font-size="11" fill="var(--muted)">(기존, 지금도 존재)</text>
+      <text x="255" y="556" text-anchor="middle" font-size="11" fill="var(--muted)">(코드 그대로, 수정 없음)</text>
       <text x="120" y="584" font-size="12">· 스텝마다 LLM이 DSL 직접 <tspan font-weight="700">생성</tspan></text>
       <text x="120" y="608" font-size="12">· 관측 13~25개 LLM 턴</text>
       <text x="120" y="632" font-size="12">· 완료 검증용 LLM 턴 별도</text>
@@ -178,7 +178,7 @@
       <!-- jev box -->
       <rect x="480" y="512" width="330" height="250" rx="10" fill="var(--jev-bg)" stroke="var(--jev)" stroke-width="1.6"/>
       <text x="645" y="538" text-anchor="middle" font-size="13" font-weight="700" fill="var(--jev)">jev TypeSafe 선택 루프</text>
-      <text x="645" y="556" text-anchor="middle" font-size="11" fill="var(--jev)">(대체됨, 이번 벤치의 기본값)</text>
+      <text x="645" y="556" text-anchor="middle" font-size="11" fill="var(--jev)">(별도 프로세스, 이번 벤치의 호출 대상)</text>
       <text x="510" y="584" font-size="12" fill="var(--ink)">· 요소 표에서 operation·target <tspan font-weight="700">선택</tspan></text>
       <text x="510" y="608" font-size="12" fill="var(--ink)">· 한 결정 = TypeSafe 요청 1회</text>
       <text x="510" y="632" font-size="12" fill="var(--ink)">· TYPE_TEXT일 때만 소형 LLM 호출</text>
@@ -198,11 +198,11 @@
       <text x="450" y="854" text-anchor="middle" font-size="13">VoiceEngine.inject(Result) → 사용자</text>
     </svg>
     <div class="legend">
-      <span><i class="swatch" style="background:var(--argo-bg);border:1px solid var(--argo)"></i>ARGO 자체 실행기</span>
-      <span><i class="swatch" style="background:var(--jev-bg);border:1px solid var(--jev)"></i>jev로 치환된 부분</span>
+      <span><i class="swatch" style="background:var(--argo-bg);border:1px solid var(--argo)"></i>ARGO 코드 (수정 없음, 지금도 그대로 존재)</span>
+      <span><i class="swatch" style="background:var(--jev-bg);border:1px solid var(--jev)"></i>이번 벤치에서 Router가 호출한 대상</span>
       <span><i class="swatch" style="background:none;border:1px dashed var(--warn)"></i>미구현 경로</span>
     </div>
-    <figcaption>Evaluator·Router·capability card는 그대로 두고, desktopweb lane의 <em>실행기</em>만 ARGO 자체 루프에서 jev로 바꿔 끼운 구조. 나머지 7개 lane(answer/files/windows/desktop/tools/cancel/correction)은 이번 벤치에서 아예 건드리지 않았다(stub).</figcaption>
+    <figcaption>Evaluator·Router·capability card, 그리고 ARGO의 tinicore ReAct 루프까지 전부 코드가 그대로다. 바뀐 것은 Router가 desktopweb lane에서 실제로 호출하는 대상뿐이며, 이번 벤치에서는 그 대상으로 jev(완전히 별도 프로세스)를 골랐다. 나머지 7개 lane(answer/files/windows/desktop/tools/cancel/correction)은 이번 벤치에서 아예 건드리지 않았다(stub).</figcaption>
   </figure>
 
   <figure>
